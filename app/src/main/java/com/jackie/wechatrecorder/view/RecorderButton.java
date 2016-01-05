@@ -1,6 +1,10 @@
 package com.jackie.wechatrecorder.view;
 
 import android.content.Context;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
+import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -8,11 +12,13 @@ import android.widget.Button;
 
 import com.jackie.wechatrecorder.R;
 
+import java.io.File;
+
 /**
  * Created by Jackie on 2016/1/2.
  * 录音按钮
  */
-public class RecorderButton extends Button {
+public class RecorderButton extends Button implements AudioManager.OnAudioStateListener {
     private static final int DISTANCE_Y_CANCEL = 50;
 
     private static final int STATE_NORMAL = 1;
@@ -21,8 +27,40 @@ public class RecorderButton extends Button {
     private int mCurrentState = STATE_NORMAL;
 
     private boolean mIsRecording = false;  //是否开始录音
+    private boolean mIsReady = false;      //长按时间是否ready
 
     private DialogManager mDialogManager;
+    private AudioManager mAudioManager;
+
+    private float mTime;
+
+    private static final int MSG_PREPARE_DONE = 0;
+    private static final int MSG_GET_VOLUME_LEVEL = 1;
+    private static final int MSG_DIALOG_DISMISS = 2;
+    private static final int MAX_VOLUME_LEVEL = 7;
+
+    private Handler mHandler = new Handler(){
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case MSG_PREPARE_DONE:
+                    mDialogManager = new DialogManager(getContext());
+                    mIsRecording = true;
+
+                    //开启线程获取音量
+                    new Thread(mGetVolumeLevelRunnable).start();
+                    break;
+                case MSG_GET_VOLUME_LEVEL:
+                    mDialogManager.updateVolumeLevel(mAudioManager.getVolumeLevel(MAX_VOLUME_LEVEL));
+                    break;
+                case MSG_DIALOG_DISMISS:
+                    mDialogManager.dismissDialog();
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
 
     public RecorderButton(Context context) {
         this(context, null);
@@ -31,16 +69,45 @@ public class RecorderButton extends Button {
     public RecorderButton(Context context, AttributeSet attrs) {
         super(context, attrs);
 
+        if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+            String directory = Environment.getExternalStorageDirectory() + File.separator + "wechat_recorder";
+            mAudioManager = AudioManager.getInstance(directory);
+            mAudioManager.setOnAudioStateListener(this);
+        }
+
         setOnLongClickListener(new OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                //TODO 真正录音开始是在audio prepare之后
-                mDialogManager = new DialogManager(getContext());
-                mIsRecording = true;
+                mIsReady = true;
+                mAudioManager.prepare();
                 return false;
             }
         });
     }
+
+    /**
+     * 录音完成后的回调
+     */
+    public interface OnRecordStateListener {
+        void onRecordDone(float seconds, String path);
+    }
+
+    private OnRecordStateListener mOnRecordStateListener;
+
+    public void setOnRecordStateListener(OnRecordStateListener onRecordStateListener) {
+        this.mOnRecordStateListener = onRecordStateListener;
+    }
+
+    private Runnable mGetVolumeLevelRunnable = new Runnable() {
+        @Override
+        public void run() {
+            while (mIsRecording) {
+                SystemClock.sleep(100);  //每隔0.1s获取一次音量大小
+                mTime += 0.1f;
+                mHandler.sendEmptyMessage(MSG_GET_VOLUME_LEVEL);
+            }
+        }
+    };
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -61,13 +128,30 @@ public class RecorderButton extends Button {
                 }
                 break;
             case MotionEvent.ACTION_UP:
+                if (!mIsReady) {
+                    reset();
+                    return super.onTouchEvent(event);
+                }
+
+                if (!mIsRecording || mTime < 0.6f) {
+                    mAudioManager.cancel();
+                    mDialogManager.showTooShortDialog();
+                    mHandler.sendEmptyMessageDelayed(MSG_DIALOG_DISMISS, 1300);
+                }
+
                 if (mCurrentState == STATE_RECORDING) {
                     //正常结束
                     //release -> callback保存录音
-                    mDialogManager.dismissDialog();;
+                    mDialogManager.dismissDialog();
+                    mAudioManager.release();
+
+                    if (mOnRecordStateListener != null) {
+                        mOnRecordStateListener.onRecordDone(mTime, mAudioManager.getCurrentFilePath());
+                    }
                 } else if (mCurrentState == STATE_CANCEL) {
                     //cancel
                     mDialogManager.dismissDialog();
+                    mAudioManager.cancel();
                 }
                 reset();
                 break;
@@ -84,7 +168,7 @@ public class RecorderButton extends Button {
                 case STATE_NORMAL:
                     setBackgroundResource(R.drawable.bg_recorder_normal);
                     setText(R.string.state_normal);
-                    break;
+                break;
                 case STATE_RECORDING:
                     setBackgroundResource(R.drawable.bg_recorder_recording);
                     setText(R.string.state_recording);
@@ -128,6 +212,13 @@ public class RecorderButton extends Button {
      */
     private void reset() {
         mIsRecording = false;
+        mIsReady = false;
+        mTime = 0;
         changeState(STATE_NORMAL);
+    }
+
+    @Override
+    public void onPrepareDone() {
+        mHandler.sendEmptyMessage(MSG_PREPARE_DONE);
     }
 }

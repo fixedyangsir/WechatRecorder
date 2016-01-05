@@ -80,10 +80,6 @@ public class DialogManager {
      */
     public void updateVolumeLevel(int level) {
         if (mDialog != null && mDialog.isShowing()) {
-            mRecorderIcon.setVisibility(View.VISIBLE);
-            mRecorderVolume.setVisibility(View.VISIBLE);
-            mRecorderLabel.setVisibility(View.VISIBLE);
-
             int resId = mContext.getResources().getIdentifier("volume" + level, "drawable", mContext.getPackageName());
             mRecorderVolume.setImageResource(resId);
         }

@@ -8,6 +8,7 @@ import java.util.UUID;
 
 /**
  * Created by Jackie on 2016/1/3.
+ * AudioManager
  */
 public class AudioManager {
     private MediaRecorder mMediaRecorder;
@@ -23,8 +24,8 @@ public class AudioManager {
      * 回调准备完毕
      */
     public interface OnAudioStateListener{
-        void prepareDone();
-    };
+        void onPrepareDone();
+    }
 
     public void setOnAudioStateListener(OnAudioStateListener onAudioStateListener) {
         this.mOnAudioStateListener = onAudioStateListener;
@@ -52,7 +53,7 @@ public class AudioManager {
 
             File directory = new File(mDirectory);
             if (!directory.exists()) {
-                directory.mkdir();
+                directory.mkdirs();
             }
 
             String fileName = generateFileName();
@@ -60,16 +61,16 @@ public class AudioManager {
             mCurrentFilePath = file.getAbsolutePath();
 
             mMediaRecorder = new MediaRecorder();
-            mMediaRecorder.setOutputFile(file.getAbsolutePath());  //设置输出文件路径
             mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC); // 设置从音频源为麦克风
             mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.RAW_AMR); //设置音频格式
             mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB); // 设置音频的编码格式
+            mMediaRecorder.setOutputFile(file.getAbsolutePath());  //设置输出文件路径
             mMediaRecorder.prepare();
             mMediaRecorder.start();
             isPrepared = true; //准备结束
 
             if (mOnAudioStateListener != null) {
-                mOnAudioStateListener.prepareDone();
+                mOnAudioStateListener.onPrepareDone();
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -87,7 +88,7 @@ public class AudioManager {
     /**
      * 获取当前音量大小
      * @param maxLevel 音量的最大值，当前为7
-     * @return
+     * @return 当前的音量大小，取值为1~7
      */
     public int getVolumeLevel(int maxLevel) {
         if(isPrepared) {
@@ -115,5 +116,9 @@ public class AudioManager {
             mCurrentFilePath = null;
         }
         release();
+    }
+
+    public String getCurrentFilePath() {
+        return mCurrentFilePath;
     }
 }
