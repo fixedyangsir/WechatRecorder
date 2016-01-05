@@ -22,9 +22,11 @@ public class DialogManager {
 
     public DialogManager(Context context) {
         this.mContext = context;
+    }
 
-        mDialog = new Dialog(context, R.style.AudioDialog);
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_recorder, null);
+    public void createDialog() {
+        mDialog = new Dialog(mContext, R.style.AudioDialog);
+        View view = LayoutInflater.from(mContext).inflate(R.layout.dialog_recorder, null);
         mDialog.setContentView(view);
 
         mRecorderIcon = (ImageView) view.findViewById(R.id.dialog_recorder_icon);

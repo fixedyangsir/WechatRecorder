@@ -23,8 +23,8 @@ public class AudioManager {
     /**
      * 回调准备完毕
      */
-    public interface OnAudioStateListener{
-        void onPrepareDone();
+    public interface OnAudioStateListener {
+        void onPrepareFinish();
     }
 
     public void setOnAudioStateListener(OnAudioStateListener onAudioStateListener) {
@@ -70,7 +70,7 @@ public class AudioManager {
             isPrepared = true; //准备结束
 
             if (mOnAudioStateListener != null) {
-                mOnAudioStateListener.onPrepareDone();
+                mOnAudioStateListener.onPrepareFinish();
             }
         } catch (IOException e) {
             e.printStackTrace();

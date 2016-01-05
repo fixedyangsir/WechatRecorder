@@ -34,7 +34,7 @@ public class RecorderButton extends Button implements AudioManager.OnAudioStateL
 
     private float mTime;
 
-    private static final int MSG_PREPARE_DONE = 0;
+    private static final int MSG_PREPARE_FINISH = 0;
     private static final int MSG_GET_VOLUME_LEVEL = 1;
     private static final int MSG_DIALOG_DISMISS = 2;
     private static final int MAX_VOLUME_LEVEL = 7;
@@ -43,8 +43,8 @@ public class RecorderButton extends Button implements AudioManager.OnAudioStateL
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
-                case MSG_PREPARE_DONE:
-                    mDialogManager = new DialogManager(getContext());
+                case MSG_PREPARE_FINISH:
+                    mDialogManager.createDialog();
                     mIsRecording = true;
 
                     //开启线程获取音量
@@ -69,6 +69,7 @@ public class RecorderButton extends Button implements AudioManager.OnAudioStateL
     public RecorderButton(Context context, AttributeSet attrs) {
         super(context, attrs);
 
+        mDialogManager = new DialogManager(context);
         if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
             String directory = Environment.getExternalStorageDirectory() + File.separator + "wechat_recorder";
             mAudioManager = AudioManager.getInstance(directory);
@@ -89,7 +90,7 @@ public class RecorderButton extends Button implements AudioManager.OnAudioStateL
      * 录音完成后的回调
      */
     public interface OnRecordStateListener {
-        void onRecordDone(float seconds, String path);
+        void onRecordFinish(float seconds, String path);
     }
 
     private OnRecordStateListener mOnRecordStateListener;
@@ -134,19 +135,16 @@ public class RecorderButton extends Button implements AudioManager.OnAudioStateL
                 }
 
                 if (!mIsRecording || mTime < 0.6f) {
-                    mAudioManager.cancel();
                     mDialogManager.showTooShortDialog();
+                    mAudioManager.cancel();
                     mHandler.sendEmptyMessageDelayed(MSG_DIALOG_DISMISS, 1300);
-                }
-
-                if (mCurrentState == STATE_RECORDING) {
-                    //正常结束
-                    //release -> callback保存录音
+                } else if (mCurrentState == STATE_RECORDING) {
+                    //正常结束，保存录音
                     mDialogManager.dismissDialog();
                     mAudioManager.release();
 
                     if (mOnRecordStateListener != null) {
-                        mOnRecordStateListener.onRecordDone(mTime, mAudioManager.getCurrentFilePath());
+                        mOnRecordStateListener.onRecordFinish(mTime, mAudioManager.getCurrentFilePath());
                     }
                 } else if (mCurrentState == STATE_CANCEL) {
                     //cancel
@@ -218,7 +216,7 @@ public class RecorderButton extends Button implements AudioManager.OnAudioStateL
     }
 
     @Override
-    public void onPrepareDone() {
-        mHandler.sendEmptyMessage(MSG_PREPARE_DONE);
+    public void onPrepareFinish() {
+        mHandler.sendEmptyMessage(MSG_PREPARE_FINISH);
     }
 }
