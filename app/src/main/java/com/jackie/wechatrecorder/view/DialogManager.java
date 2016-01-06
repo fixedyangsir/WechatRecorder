@@ -43,7 +43,7 @@ public class DialogManager {
             mRecorderLabel.setVisibility(View.VISIBLE);
 
             mRecorderIcon.setImageResource(R.drawable.recorder);
-            mRecorderLabel.setText("手指上滑，取消发送");
+            mRecorderLabel.setText(R.string.dialog_recording);
         }
     }
 
@@ -54,7 +54,7 @@ public class DialogManager {
             mRecorderLabel.setVisibility(View.VISIBLE);
 
             mRecorderIcon.setImageResource(R.drawable.cancel);
-            mRecorderLabel.setText("松开手指，取消发送");
+            mRecorderLabel.setText(R.string.dialog_cancel);
         }
     }
 
@@ -65,7 +65,7 @@ public class DialogManager {
             mRecorderLabel.setVisibility(View.VISIBLE);
 
             mRecorderIcon.setImageResource(R.drawable.voice_too_short);
-            mRecorderLabel.setText("录音时间太短");
+            mRecorderLabel.setText(R.string.dialog_too_short);
         }
     }
 

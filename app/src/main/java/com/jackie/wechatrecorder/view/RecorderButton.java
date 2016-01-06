@@ -90,7 +90,7 @@ public class RecorderButton extends Button implements AudioManager.OnAudioStateL
      * 录音完成后的回调
      */
     public interface OnRecordStateListener {
-        void onRecordFinish(float seconds, String path);
+        void onRecordFinish(float time, String filePath);
     }
 
     private OnRecordStateListener mOnRecordStateListener;
